@@ -1,5 +1,16 @@
 const global = {
   currentPage: window.location.pathname,
+  search: {
+    term: '',
+    type: '',
+    page: 1,
+    totalPages: 1,
+    totalResults: 0,
+  },
+  api: {
+    apiKey: '6a9fe0afa388ceb8ebefb6cd2b238443',
+    apiUrl: 'https:/api.themoviedb.org/3',
+  },
 }
 
 async function displayPopularMovies() {
@@ -220,6 +231,112 @@ function displayBackgroundImage(type, backgroundPath) {
   }
 }
 
+async function search() {
+  const queryString = location.search
+  const urlParams = new URLSearchParams(queryString)
+
+  global.search.type = urlParams.get('type')
+  global.search.term = urlParams.get('search-term')
+
+  if (global.search.term !== '' && global.search.term !== null) {
+    const { results, total_pages, page, total_results } = await searchAPIData()
+
+    global.search.page = page
+    global.search.totalPages = total_pages
+    global.search.totalResults = total_results
+
+    if (results.length === 0) {
+      showAlert('No results found')
+      return
+    }
+    displaySearchResults(results)
+  } else {
+    showAlert('Please enter a search term')
+  }
+}
+
+function displaySearchResults(results) {
+  document.getElementById('search-results').innerHTML = ''
+  document.getElementById('search-results-heading').innerHTML = ''
+  document.getElementById('pagination').innerHTML = ''
+  results.forEach((result) => {
+    const div = document.createElement('div')
+    div.classList.add('card')
+
+    div.innerHTML = `
+    <a href="${global.search.type}-details.html?id=${result.id}">
+    ${
+      result.poster_path
+        ? `<img
+            src="https://image.tmdb.org/t/p/w500${result.poster_path}"
+            class="card-img-top"
+            alt="${global.search.type === 'movie' ? result.title : result.name}"
+          />`
+        : `<img
+          src="images/no-image.jpg"
+          class="card-img-top"
+          alt="${global.search.type === 'movie' ? result.title : result.name}"
+        />`
+    }
+    </a>
+    <div class="card-body">
+      <h5 class="card-title">${
+        global.search.type === 'movie' ? result.title : result.name
+      }</h5>
+      <p class="card-text">
+        <small class="text-muted">${
+          global.search.type === 'movie'
+            ? `Release: ${result.release_date}`
+            : `First Air Date: ${result.first_air_date}`
+        }</small>
+      </p>
+    </div>
+    `
+
+    document.getElementById('search-results-heading').innerHTML = `
+        <h2>${
+          results.length
+        } of ${global.search.totalResults.toLocaleString()} Results for '${
+      global.search.term
+    }'</h2>
+    `
+    document.getElementById('search-results').appendChild(div)
+  })
+  displayPagination()
+}
+
+function displayPagination() {
+  const div = document.createElement('div')
+  div.classList.add('pagination')
+  div.innerHTML = `
+    <button class="btn btn-primary" id="prev">Prev</button>
+    <button class="btn btn-primary" id="next">Next</button>
+    <div class="page-counter">Page ${global.search.page} of ${global.search.totalPages}</div>
+  `
+
+  document.getElementById('pagination').appendChild(div)
+
+  if (global.search.page === 1) {
+    document.getElementById('prev').disabled = true
+  }
+
+  if (global.search.page === global.search.totalPages) {
+    document.getElementById('next').disabled = true
+  }
+
+  document.getElementById('next').addEventListener('click', async () => {
+    global.search.page++
+    const { results, total_pages } = await searchAPIData()
+    displaySearchResults(results)
+  })
+
+  document.getElementById('prev').addEventListener('click', async () => {
+    global.search.page--
+    const { results, total_pages } = await searchAPIData()
+    displaySearchResults(results)
+  })
+}
+
 async function displaySlider() {
   const { results } = await fetchAPIData('/movie/now_playing')
 
@@ -267,18 +384,28 @@ function initSwiper() {
 }
 
 async function fetchAPIData(endpoint) {
-  const API_URL = 'https:/api.themoviedb.org/3'
-
+  const API_KEY = global.api.apiKey
+  const API_URL = global.api.apiUrl
   showSpinner()
 
-  const response = await fetch(`${API_URL}/${endpoint}?language=en-US`, {
-    method: 'GET',
-    headers: {
-      accept: 'application/json',
-      Authorization:
-        'Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2YTlmZTBhZmEzODhjZWI4ZWJlZmI2Y2QyYjIzODQ0MyIsInN1YiI6IjY0NWZlNTgyZTNmYTJmMDEwM2EwY2I1NiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.Jiew9ttwGC5bTwLnPVFlhJVPLXQXxw4NKDSglSgvnOU',
-    },
-  })
+  const response = await fetch(
+    `${API_URL}/${endpoint}?api_key=${API_KEY}&language=en-US`
+  )
+  const data = await response.json()
+
+  hideSpinner()
+
+  return data
+}
+
+async function searchAPIData() {
+  const API_KEY = global.api.apiKey
+  const API_URL = global.api.apiUrl
+  showSpinner()
+
+  const response = await fetch(
+    `${API_URL}/search/${global.search.type}?api_key=${API_KEY}&language=en-US&query=${global.search.term}&page=${global.search.page}`
+  )
   const data = await response.json()
 
   hideSpinner()
@@ -303,6 +430,18 @@ function highlightActiveLink() {
   })
 }
 
+function showAlert(message, className = 'error') {
+  const alertEl = document.createElement('div')
+  alertEl.classList.add('alert', className)
+  alertEl.appendChild(document.createTextNode(message))
+
+  document.getElementById('alert').appendChild(alertEl)
+
+  setTimeout(() => {
+    alertEl.remove()
+  }, 3000)
+}
+
 function init() {
   switch (global.currentPage) {
     case '/':
@@ -320,7 +459,7 @@ function init() {
       displayShowDetails()
       break
     case '/search.html':
-      console.log('Search')
+      search()
       break
   }
 
