@@ -267,14 +267,18 @@ function initSwiper() {
 }
 
 async function fetchAPIData(endpoint) {
-  const API_KEY = '6a9fe0afa388ceb8ebefb6cd2b238443'
   const API_URL = 'https:/api.themoviedb.org/3'
 
   showSpinner()
 
-  const response = await fetch(
-    `${API_URL}/${endpoint}?api_key=${API_KEY}&language=en-US`
-  )
+  const response = await fetch(`${API_URL}/${endpoint}?language=en-US`, {
+    method: 'GET',
+    headers: {
+      accept: 'application/json',
+      Authorization:
+        'Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiI2YTlmZTBhZmEzODhjZWI4ZWJlZmI2Y2QyYjIzODQ0MyIsInN1YiI6IjY0NWZlNTgyZTNmYTJmMDEwM2EwY2I1NiIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.Jiew9ttwGC5bTwLnPVFlhJVPLXQXxw4NKDSglSgvnOU',
+    },
+  })
   const data = await response.json()
 
   hideSpinner()
