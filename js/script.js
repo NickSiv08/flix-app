@@ -9,7 +9,7 @@ const global = {
   },
   api: {
     apiKey: '6a9fe0afa388ceb8ebefb6cd2b238443',
-    apiUrl: 'https:/api.themoviedb.org/3',
+    apiUrl: 'https://api.themoviedb.org/3',
   },
 }
 
@@ -389,7 +389,7 @@ async function fetchAPIData(endpoint) {
   showSpinner()
 
   const response = await fetch(
-    `${API_URL}/${endpoint}?api_key=${API_KEY}&language=en-US`
+    `${API_URL}${endpoint}?api_key=${API_KEY}&language=en-US`
   )
   const data = await response.json()
 
